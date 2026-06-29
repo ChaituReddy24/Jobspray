@@ -1,0 +1,11 @@
+galaxyjob/
+├── app.py                 # Main Flask application
+├── requirements.txt       # Python dependencies
+├── runtime.txt            # Python version for deployment
+├── Procfile               # For Heroku/Render deployment
+├── README.md              # Documentation
+├── templates/
+│   └── index.html         # Frontend with galaxy background
+├── static/
+│   └── style.css          # Additional styling (optional)
+└── uploads/               # Resume upload directory (created at runtime)

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GalaxyJob — AI Job Aggregator</title>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── RESET & BASE ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      color: #e8edf5;
+      overflow-x: hidden;
+      position: relative;
+
+      /* ★★★ GALAXY BACKGROUND — deep blue with white & orange clouds ★★★ */
+      background: radial-gradient(ellipse at 20% 50%, #0b0e27 0%, #040614 100%);
+    }
+
+    /* ── ANIMATED STARS LAYER ─────────────────────────────────────── */
+    #stars-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── NEBULA / CLOUD OVERLAYS ──────────────────────────────────── */
+    .nebula {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .nebula--blue1 {
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, #1a3a8a 0%, transparent 70%);
+      top: -200px; left: -200px;
+      animation: drift 25s ease-in-out infinite alternate;
+    }
+    .nebula--blue2 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #2b5fd9 0%, transparent 70%);
+      bottom: -100px; right: -100px;
+      animation: drift 30s ease-in-out infinite alternate-reverse;
+    }
+    .nebula--white {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(220,230,255,0.6) 0%, transparent 70%);
+      top: 40%; left: 30%;
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+    .nebula--orange1 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(255,160,60,0.45) 0%, transparent 70%);
+      top: 15%; right: 20%;
+      animation: drift 22s ease-in-out infinite alternate-reverse;
+    }
+    .nebula--orange2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(255,120,30,0.3) 0%, transparent 70%);
+      bottom: 30%; left: 10%;
+      animation: drift 28s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      0%   { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(60px, -40px) scale(1.15); }
+    }
+
+    /* ── CONTENT WRAPPER (above nebula & stars) ──────────────────── */
+    .app-wrapper {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ───────────────────────────────────────────────────── */
+    header {
+      padding: 1.75rem 2rem 1rem;
+      text-align: center;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #b8d0ff, #ffe0b0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo i { -webkit-text-fill-color: #fecb8f; font-size: 1.7rem; }
+    .subtitle {
+      color: rgba(200, 215, 250, 0.7);
+      font-size: 0.95rem;
+      margin-top: 0.2rem;
+      font-weight: 400;
+    }
+
+    /* ── MAIN CONTAINER ───────────────────────────────────────────── */
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.5rem 1.5rem 3rem;
+      flex: 1;
+    }
+
+    /* ── GLASS CARD ───────────────────────────────────────────────── */
+    .card {
+      background: rgba(10, 14, 40, 0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 1.25rem;
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.3s;
+    }
+    .card:hover { border-color: rgba(255, 200, 120, 0.15); }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #d0ddff;
+    }
+    .card h2 i { color: #fecb8f; }
+
+    /* ── FORMS & INPUTS ───────────────────────────────────────────── */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: rgba(200, 215, 250, 0.8);
+      margin-bottom: 0.3rem;
+    }
+    input[type="text"],
+    input[type="file"],
+    select {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 0.75rem;
+      color: #e8edf5;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border 0.25s, box-shadow 0.25s;
+      outline: none;
+    }
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #fecb8f;
+      box-shadow: 0 0 0 3px rgba(254, 203, 143, 0.15);
+    }
+    input[type="file"]::file-selector-button {
+      background: rgba(254, 203, 143, 0.15);
+      border: 1px solid rgba(254, 203, 143, 0.3);
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.9rem;
+      color: #fecb8f;
+      cursor: pointer;
+      font-family: inherit;
+      margin-right: 0.75rem;
+      transition: background 0.2s;
+    }
+    input[type="file"]::file-selector-button:hover {
+      background: rgba(254, 203, 143, 0.25);
+    }
+    select option { background: #111633; color: #e8edf5; }
+
+    .row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .row .form-group { flex: 1; min-width: 150px; }
+
+    /* ── BUTTONS ──────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.6rem;
+      border: none;
+      border-radius: 0.85rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      color: #fff;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2b5fd9, #1a3a8a);
+      box-shadow: 0 4px 16px rgba(43, 95, 217, 0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(43, 95, 217, 0.5);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-accent {
+      background: linear-gradient(135deg, #f89b4a, #d96c1a);
+      box-shadow: 0 4px 16px rgba(248, 155, 74, 0.3);
+    }
+    .btn-accent:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(248, 155, 74, 0.45);
+    }
+    .btn-accent:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.12); }
+
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    /* ── STATUS / MESSAGES ────────────────────────────────────────── */
+    .status-box {
+      margin-top: 1rem;
+      padding: 0.8rem 1.2rem;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .status-box.info {
+      display: block;
+      background: rgba(43, 95, 217, 0.15);
+      border: 1px solid rgba(43, 95, 217, 0.3);
+      color: #b0c8ff;
+    }
+    .status-box.success {
+      display: block;
+      background: rgba(60, 200, 120, 0.12);
+      border: 1px solid rgba(60, 200, 120, 0.3);
+      color: #7ddb9e;
+    }
+    .status-box.error {
+      display: block;
+      background: rgba(220, 60, 60, 0.15);
+      border: 1px solid rgba(220, 60, 60, 0.3);
+      color: #ff8a8a;
+    }
+
+    /* ── RESUMÉ PREVIEW ───────────────────────────────────────────── */
+    .resume-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.6rem;
+      margin: 0.5rem 0;
+    }
+    .resume-tag {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 0.6rem;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+    }
+    .resume-tag strong { color: #fecb8f; display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.1rem; }
+
+    /* ── JOB RESULTS ──────────────────────────────────────────────── */
+    .job-count {
+      font-size: 0.95rem;
+      color: rgba(200, 215, 250, 0.7);
+      margin-bottom: 1rem;
+    }
+    .job-count strong { color: #fecb8f; }
+
+    .job-list { display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .job-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0.9rem;
+      padding: 1rem 1.25rem;
+      transition: all 0.25s;
+      cursor: pointer;
+    }
+    .job-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(254, 203, 143, 0.2);
+      transform: translateX(4px);
+    }
+    .job-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #e8edf5;
+    }
+    .job-company {
+      color: #fecb8f;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .job-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.5rem;
+      margin-top: 0.4rem;
+      font-size: 0.82rem;
+      color: rgba(200, 215, 250, 0.6);
+    }
+    .job-meta i { width: 1rem; color: rgba(254, 203, 143, 0.6); }
+    .job-meta .badge {
+      display: inline-block;
+      background: rgba(254, 203, 143, 0.1);
+      border-radius: 0.4rem;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.75rem;
+      color: #fecb8f;
+      border: 1px solid rgba(254, 203, 143, 0.15);
+    }
+    .job-site {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .job-site i { font-size: 0.7rem; }
+
+    .job-description {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: rgba(200, 215, 250, 0.65);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .no-jobs {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: rgba(200, 215, 250, 0.5);
+    }
+    .no-jobs i { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+
+    /* ── LOADER ───────────────────────────────────────────────────── */
+    .loader {
+      display: inline-block;
+      width: 1.2rem; height: 1.2rem;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fecb8f;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FOOTER ───────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.8rem;
+      color: rgba(200, 215, 250, 0.3);
+    }
+    footer a { color: rgba(200, 215, 250, 0.5); text-decoration: none; }
+    footer a:hover { color: #fecb8f; }
+
+    /* ── RESPONSIVE ───────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      header { padding: 1.25rem 1rem 0.5rem; }
+      .logo { font-size: 1.5rem; }
+      .container { padding: 0 0.75rem 2rem; }
+      .card { padding: 1.25rem; }
+      .row { flex-direction: column; gap: 0.5rem; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ★ STARS (canvas generated by JS) -->
+  <canvas id="stars-canvas"></canvas>
+
+  <!-- ★ NEBULA / CLOUD LAYERS -->
+  <div class="nebula nebula--blue1"></div>
+  <div class="nebula nebula--blue2"></div>
+  <div class="nebula nebula--white"></div>
+  <div class="nebula nebula--orange1"></div>
+  <div class="nebula nebula--orange2"></div>
+
+  <!-- ★ APP CONTENT -->
+  <div class="app-wrapper">
+
+    <header>
+      <div class="logo">
+        <i class="fas fa-rocket"></i> GalaxyJob
+      </div>
+      <div class="subtitle">
+        AI-powered job aggregator — search every platform from one place
+      </div>
+    </header>
+
+    <main class="container">
+
+      <!-- ── UPLOAD / SEARCH CARD ── -->
+      <div class="card">
+        <h2><i class="fas fa-upload"></i> 1. Upload Your Resumé</h2>
+        <p style="font-size:0.85rem;color:rgba(200,215,250,0.55);margin-bottom:1rem;">
+          We'll parse your skills, experience &amp; designation to find the perfect jobs.
+        </p>
+
+        <div class="form-group">
+          <label for="resume-file">Resumé (PDF, DOCX, TXT)</label>
+          <input type="file" id="resume-file" accept=".pdf,.docx,.doc,.txt" />
+        </div>
+
+        <div id="resume-status" class="status-box"></div>
+        <div id="resume-preview-area"></div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btn-parse" onclick="parseResume()">
+            <i class="fas fa-microchip"></i> Parse Resumé
+          </button>
+        </div>
+      </div>
+
+      <!-- ── MANUAL QUERY / OPTIONS ── -->
+      <div class="card">
+        <h2><i class="fas fa-sliders-h"></i> 2. Refine Search</h2>
+        <div class="row">
+          <div class="form-group" style="flex:2;">
+            <label for="search-query">Search query <span style="opacity:0.5;">(leave blank to use resumé)</span></label>
+            <input type="text" id="search-query" placeholder="e.g. machine learning engineer, python developer…" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label for="search-location">Location</label>
+            <input type="text" id="search-location" placeholder="e.g. Remote, New York, London…" value="Remote" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="search-countries">Target countries <span style="opacity:0.5;">(hold Ctrl/Cmd to select multiple)</span></label>
+          <select id="search-countries" multiple size="4">
+            <option value="USA" selected>🇺🇸 USA</option>
+            <option value="UK">🇬🇧 United Kingdom</option>
+            <option value="Canada">🇨🇦 Canada</option>
+            <option value="Australia">🇦🇺 Australia</option>
+            <option value="India">🇮🇳 India</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Italy">🇮🇹 Italy</option>
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Brazil">🇧🇷 Brazil</option>
+            <option value="Japan">🇯🇵 Japan</option>
+            <option value="Singapore">🇸🇬 Singapore</option>
+            <option value="UAE">🇦🇪 UAE</option>
+            <option value="Switzerland">🇨🇭 Switzerland</option>
+            <option value="Sweden">🇸🇪 Sweden</option>
+            <option value="Ireland">🇮🇪 Ireland</option>
+            <option value="New Zealand">🇳🇿 New Zealand</option>
+            <option value="Mexico">🇲🇽 Mexico</option>
+            <option value="South Africa">🇿🇦 South Africa</option>
+          </select>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-accent" id="btn-search" onclick="searchJobs()">
+            <i class="fas fa-search"></i> Search All Platforms
+          </button>
+          <button class="btn btn-ghost" onclick="clearResults()">
+            <i class="fas fa-times"></i> Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- ── RESULTS ── -->
+      <div class="card" id="results-card" style="display:none;">
+        <h2><i class="fas fa-briefcase"></i> Results</h2>
+        <div id="job-count" class="job-count"></div>
+        <div id="job-list" class="job-list"></div>
+      </div>
+
+    </main>
+
+    <footer>
+      <a href="https://github.com" target="_blank"><i class="fab fa-github"></i> GalaxyJob</a>
+      &middot; Free &amp; Open Source &middot; Powered by JobSpy
+    </footer>
+  </div>
+
+  <!-- ── JAVASCRIPT ─────────────────────────────────────────────────────── -->
+  <script>
+    // ── STARFIELD GENERATOR ──────────────────────────────────────────
+    const canvas = document.getElementById('stars-canvas');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function createStars(count = 350) {
+      stars = [];
+      for (let i = 0; i < count; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.8 + 0.3,
+          a: Math.random() * 0.8 + 0.2,
+          speed: Math.random() * 0.008 + 0.002,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+    createStars();
+
+    function drawStars(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const s of stars) {
+        const alpha = s.a * (0.6 + 0.4 * Math.sin(time * s.speed + s.phase));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fill();
+      }
+    }
+
+    let animFrame;
+    function animate(time) {
+      drawStars(time / 1000);
+      animFrame = requestAnimationFrame(animate);
+    }
+    animate(0);
+
+    // ── STATE ────────────────────────────────────────────────────────
+    let parsedResumeData = null;
+    let isSearching = false;
+    let isParsing = false;
+
+    // ── DOM REFS ─────────────────────────────────────────────────────
+    const resumeFile = document.getElementById('resume-file');
+    const resumeStatus = document.getElementById('resume-status');
+    const resumePreview = document.getElementById('resume-preview-area');
+    const btnParse = document.getElementById('btn-parse');
+    const btnSearch = document.getElementById('btn-search');
+    const resultsCard = document.getElementById('results-card');
+    const jobCount = document.getElementById('job-count');
+    const jobList = document.getElementById('job-list');
+
+    // ── PARSE RESUME ─────────────────────────────────────────────────
+    async function parseResume() {
+      const file = resumeFile.files[0];
+      if (!file) {
+        showStatus(resumeStatus, 'Please select a resumé file first.', 'error');
+        return;
+      }
+      if (file.size > 16 * 1024 * 1024) {
+        showStatus(resumeStatus, 'File too large (max 16 MB).', 'error');
+        return;
+      }
+
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['pdf','docx','doc','txt'].includes(ext)) {
+        showStatus(resumeStatus, 'Unsupported format. Use PDF, DOCX, or TXT.', 'error');
+        return;
+      }
+
+      isParsing = true;
+      btnParse.disabled = true;
+      btnParse.innerHTML = '<span class="loader"></span> Parsing…';
+      showStatus(resumeStatus, 'Parsing your resumé…', 'info');
+
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      try {
+        const resp = await fetch('/api/parse-resume', { method: 'POST', body: formData });
+        const json = await resp.json();
+
+        if (!json.success) {
+          showStatus(resumeStatus, json.error || 'Parse failed.', 'error');
+          return;
+        }
+
+        parsedResumeData = json.data;
+        showStatus(resumeStatus, 'Resumé parsed successfully!', 'success');
+        renderResumePreview(parsedResumeData);
+
+      } catch (err) {
+        showStatus(resumeStatus, `Network error: ${err.message}`, 'error');
+      } finally {
+        isParsing = false;
+        btnParse.disabled = false;
+        btnParse.innerHTML = '<i class="fas fa-microchip"></i> Parse Resumé';
+      }
+    }
+
+    function renderResumePreview(data) {
+      if (!data) { resumePreview.innerHTML = ''; return; }
+      const skills = (data.skills || []).map(s => `<span class="badge" style="margin:0.15rem;">${escHtml(s)}</span>`).join(' ');
+      resumePreview.innerHTML = `
+        <div class="resume-preview">
+          <div class="resume-tag"><strong>Name</strong>${escHtml(data.name || '—')}</div>
+          <div class="resume-tag"><strong>Email</strong>${escHtml(data.email || '—')}</div>
+          <div class="resume-tag"><strong>Designation</strong>${escHtml(data.designation || '—')}</div>
+          <div class="resume-tag"><strong>Experience</strong>${data.experience != null ? data.experience + ' yrs' : '—'}</div>
+          <div class="resume-tag"><strong>Degree</strong>${escHtml(data.degree || '—')}</div>
+          <div class="resume-tag"><strong>College</strong>${escHtml(data.college || '—')}</div>
+          <div class="resume-tag" style="grid-column:1/-1;"><strong>Skills</strong>${skills || '—'}</div>
+        </div>
+      `;
+    }
+
+    // ── SEARCH JOBS ──────────────────────────────────────────────────
+    async function searchJobs() {
+      if (isSearching) return;
+
+      const manualQuery = document.getElementById('search-query').value.trim();
+      const location = document.getElementById('search-location').value.trim() || 'Remote';
+      const selectEl = document.getElementById('search-countries');
+      const countries = Array.from(selectEl.selectedOptions).map(o => o.value);
+      if (countries.length === 0) {
+        showStatus(resumeStatus, 'Select at least one country.', 'error');
+        return;
+      }
+
+      // Build payload
+      let payload;
+      if (manualQuery) {
+        payload = { query: manualQuery, location, countries };
+      } else if (parsedResumeData) {
+        payload = { resume_data: parsedResumeData, location, countries };
+      } else {
+        payload = { query: 'software engineer', location, countries };
+      }
+
+      isSearching = true;
+      btnSearch.disabled = true;
+      btnSearch.innerHTML = '<span class="loader"></span> Searching…';
+      resultsCard.style.display = 'none';
+
+      try {
+        const resp = await fetch('/api/search-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await resp.json();
+
+        if (!json.success) {
+          showStatus(resumeStatus, json.error || 'Search failed.', 'error');
+          return;
+        }
+
+        renderJobs(json);
+
+      } catch (err) {
+        showStatus(resumeStatus, `Network error: ${err.message}`, 'error');
+      } finally {
+        isSearching = false;
+        btnSearch.disabled = false;
+        btnSearch.innerHTML = '<i class="fas fa-search"></i> Search All Platforms';
+      }
+    }
+
+    function renderJobs(data) {
+      const jobs = data.jobs || [];
+      const total = data.total_jobs || jobs.length;
+
+      resultsCard.style.display = 'block';
+
+      if (jobs.length === 0) {
+        jobCount.innerHTML = '';
+        jobList.innerHTML = `
+          <div class="no-jobs">
+            <i class="fas fa-search-minus"></i>
+            <p>No jobs found. Try a different query, location, or country.</p>
+          </div>
+        `;
+        return;
+      }
+
+      jobCount.innerHTML = `
+        <strong>${total}</strong> job${total !== 1 ? 's' : ''} found
+        ${data.queries_used ? `· Queries: <span style="color:#fecb8f;">${escHtml(data.queries_used.join(', '))}</span>` : ''}
+      `;
+
+      jobList.innerHTML = jobs.map(job => {
+        const title = escHtml(job.title || 'Untitled');
+        const company = escHtml(job.company || 'Unknown');
+        const companyUrl = job.company_url || '';
+        const jobUrl = job.job_url || job.url || '#';
+        const loc = escHtml(job.location || '—');
+        const remote = job.is_remote ? '<span class="badge">🌍 Remote</span>' : '';
+        const jobType = job.job_type ? `<span class="badge">${escHtml(job.job_type)}</span>` : '';
+        const salary = job.min_amount
+          ? `<span style="color:#7ddb9e;">${job.currency || '$'}${fmtSalary(job.min_amount)}${job.max_amount ? ' – ' + fmtSalary(job.max_amount) : ''}</span>`
+          : '';
+        const site = escHtml(job.site || job._source_country || 'job board');
+        const siteIcon = site.toLowerCase().includes('linkedin') ? 'fab fa-linkedin' :
+                        site.toLowerCase().includes('indeed') ? 'fas fa-building' :
+                        site.toLowerCase().includes('glassdoor') ? 'fas fa-door-open' :
+                        site.toLowerCase().includes('google') ? 'fab fa-google' :
+                        site.toLowerCase().includes('zip') ? 'fas fa-bolt' : 'fas fa-briefcase';
+        const posted = job.date_posted ? new Date(job.date_posted).toLocaleDateString() : '';
+        const desc = escHtml((job.description || '').substring(0, 250));
+
+        return `
+          <div class="job-card" onclick="window.open('${escHtml(jobUrl)}', '_blank')">
+            <div class="job-title">${title}</div>
+            <div class="job-company">${companyUrl ? `<a href="${escHtml(companyUrl)}" target="_blank" onclick="event.stopPropagation();">${company}</a>` : company}</div>
+            <div class="job-meta">
+              <span><i class="fas fa-map-marker-alt"></i> ${loc}</span>
+              <span class="job-site"><i class="${siteIcon}"></i> ${site}</span>
+              ${remote}
+              ${jobType}
+              ${salary ? `<span><i class="fas fa-dollar-sign"></i> ${salary}</span>` : ''}
+              ${posted ? `<span><i class="far fa-calendar-alt"></i> ${posted}</span>` : ''}
+            </div>
+            ${desc ? `<div class="job-description">${desc}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function clearResults() {
+      resultsCard.style.display = 'none';
+      jobList.innerHTML = '';
+      jobCount.innerHTML = '';
+      document.getElementById('search-query').value = '';
+    }
+
+    // ── HELPERS ──────────────────────────────────────────────────────
+    function showStatus(el, msg, type) {
+      el.className = `status-box ${type}`;
+      el.textContent = msg;
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    function fmtSalary(val) {
+      const n = Number(val);
+      if (isNaN(n)) return val;
+      if (n >= 1000) return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'k';
+      return String(n);
+    }
+
+    // ── DRAG & DROP HANDLING ────────────────────────────────────────
+    resumeFile.addEventListener('dragover', (e) => { e.preventDefault(); });
+    resumeFile.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files.length) resumeFile.files = e.dataTransfer.files; });
+  </script>
+</body>
+</html>
